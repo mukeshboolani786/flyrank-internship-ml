@@ -1,0 +1,18 @@
+[
+  {
+    "method":"baseline_rules",
+    "precision_at_50":0.12,
+    "hits_in_top_50":6,
+    "recall_at_50":0.001,
+    "average_precision":0.188,
+    "base_rate":0.195
+  },
+  {
+    "method":"random_forest",
+    "precision_at_50":0.18,
+    "hits_in_top_50":9,
+    "recall_at_50":0.002,
+    "average_precision":0.375,
+    "base_rate":0.195
+  }
+]
