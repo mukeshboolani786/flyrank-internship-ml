@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Which pages should we review first? — Refresh / Content Opportunity Scoring</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#fbfaf7;
+    --ink:#1b2430;
+    --ink-soft:#4b5563;
+    --rule:#dcd8cd;
+    --signal:#b5533c;      /* terracotta-adjacent but muted/desaturated on purpose, used sparingly */
+    --confirm:#3f6659;     /* muted teal-green: "measured" / positive signal */
+    --chance:#9a3b2f;      /* used only for the chance-line marker */
+    --card:#ffffff;
+    --mono:'IBM Plex Mono', ui-monospace, monospace;
+    --sans:'IBM Plex Sans', system-ui, sans-serif;
+    --serif:'Newsreader', Georgia, serif;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:var(--sans); line-height:1.6; font-size:17px;
+  }
+  .wrap{max-width:760px; margin:0 auto; padding:0 24px;}
+  header.hero{
+    padding:88px 0 56px; border-bottom:1px solid var(--rule);
+  }
+  .eyebrow{
+    font-family:var(--mono); font-size:12.5px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--ink-soft); margin:0 0 18px;
+  }
+  h1.title{
+    font-family:var(--serif); font-weight:500; font-size:clamp(32px, 5vw, 48px);
+    line-height:1.12; margin:0 0 22px; letter-spacing:-.01em;
+  }
+  .lede{ font-size:19px; color:var(--ink-soft); max-width:60ch; margin:0 0 28px;}
+  .meta-row{
+    display:flex; gap:28px; flex-wrap:wrap; font-family:var(--mono); font-size:13px; color:var(--ink-soft);
+  }
+  .meta-row div span{display:block; color:var(--ink); font-weight:600; margin-top:2px;}
+
+  section{padding:52px 0; border-bottom:1px solid var(--rule);}
+  section:last-of-type{border-bottom:none;}
+  h2{
+    font-family:var(--serif); font-weight:500; font-size:28px; margin:0 0 8px;
+    display:flex; align-items:baseline; gap:12px;
+  }
+  h2 .num{font-family:var(--mono); font-size:14px; color:var(--signal); font-weight:600;}
+  h3{font-family:var(--sans); font-weight:700; font-size:16px; margin:28px 0 10px;}
+  p{margin:0 0 16px;}
+  ul, ol{margin:0 0 16px; padding-left:22px;}
+  li{margin-bottom:6px;}
+  a{color:var(--confirm);}
+  strong{font-weight:600;}
+  code, .code{font-family:var(--mono); font-size:.92em; background:#f0ede4; padding:1px 5px; border-radius:3px;}
+
+  .callout{
+    background:var(--card); border:1px solid var(--rule); border-left:4px solid var(--signal);
+    padding:18px 22px; border-radius:2px; font-size:15.5px; margin:20px 0;
+  }
+  .callout.good{border-left-color:var(--confirm);}
+
+  table{width:100%; border-collapse:collapse; margin:18px 0 24px; font-size:14.5px;}
+  th, td{ text-align:left; padding:9px 10px; border-bottom:1px solid var(--rule); font-family:var(--mono); }
+  th{font-family:var(--sans); font-weight:600; font-size:13px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.03em;}
+  tr:last-child td{border-bottom:none;}
+
+  figure{margin:26px 0;}
+  figure img{width:100%; display:block; border:1px solid var(--rule); border-radius:3px; background:#fff;}
+  figcaption{font-size:13.5px; color:var(--ink-soft); margin-top:8px; font-family:var(--mono);}
+
+  /* --- Signature element: the chance-line gauge --- */
+  .gauge-block{margin:28px 0;}
+  .gauge{position:relative; height:34px; background:#efece3; border-radius:4px; overflow:visible; margin-top:10px;}
+  .gauge-fill{position:absolute; top:0; left:0; height:100%; border-radius:4px;}
+  .gauge-fill.baseline{background:#c9c2b0;}
+  .gauge-fill.model{background:var(--confirm);}
+  .gauge-row{margin-bottom:22px;}
+  .gauge-label{display:flex; justify-content:space-between; font-family:var(--mono); font-size:13px; margin-bottom:6px;}
+  .chance-marker{position:absolute; top:-6px; bottom:-6px; width:2px; background:var(--chance);}
+  .chance-marker::after{
+    content:'chance line'; position:absolute; top:-20px; left:50%; transform:translateX(-50%);
+    font-family:var(--mono); font-size:11px; color:var(--chance); white-space:nowrap;
+  }
+
+  .badge{
+    display:inline-block; font-family:var(--mono); font-size:12px; padding:2px 8px; border-radius:3px;
+    background:#eee7db; color:var(--ink); margin:2px 4px 2px 0;
+  }
+  .badge.refresh{background:#f3e0d8; color:#8a3f2c;}
+  .badge.monitor{background:#e4e9e6; color:#3a5148;}
+  .badge.recover{background:#dde8e4; color:#2c5a4c;}
+  .badge.investigate{background:#efe6d6; color:#6b4f22;}
+  .badge.protect{background:#e6e4f1; color:#463c7a;}
+
+  .queue-row{display:grid; grid-template-columns:32px 1fr auto; gap:12px; align-items:center; padding:10px 0; border-bottom:1px solid var(--rule); font-size:14px;}
+  .queue-row .rank{font-family:var(--mono); color:var(--ink-soft);}
+  .queue-row .id{font-family:var(--mono); font-size:13px;}
+  .queue-row .score{font-family:var(--mono); font-weight:600;}
+
+  footer{padding:48px 0 80px; font-size:14px; color:var(--ink-soft);}
+  footer a{color:var(--ink-soft); text-decoration-color:var(--rule);}
+  .toc{font-family:var(--mono); font-size:13px; display:flex; flex-wrap:wrap; gap:6px 18px; margin-top:24px;}
+  .toc a{color:var(--ink-soft); text-decoration:none; border-bottom:1px dotted var(--rule);}
+  .toc a:hover{color:var(--ink); border-bottom-color:var(--ink);}
+
+  @media (max-width:600px){
+    body{font-size:16px;}
+    header.hero{padding:56px 0 40px;}
+    section{padding:38px 0;}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">FlyRank ML Internship — Capstone — Refresh / Content Opportunity Scoring</p>
+    <h1 class="title">Which pages should we review first — and how sure are we, really?</h1>
+    <p class="lede">A ranked, reason-coded review queue for content pages, built from search and
+    engagement history in a 79-million-row warehouse — with an honest report of where the ranking
+    works and where it doesn't.</p>
+    <div class="meta-row">
+      <div>Dataset<span>FlyRank/internship-warehouse</span></div>
+      <div>Rows scanned<span>78,835,655</span></div>
+      <div>Test cutoff<span>2026-01-31</span></div>
+      <div>Method<span>Random forest vs rule baseline</span></div>
+    </div>
+    <div class="toc">
+      <a href="#abstract">Abstract</a>
+      <a href="#intro">Introduction</a>
+      <a href="#data">Data</a>
+      <a href="#method">Methodology</a>
+      <a href="#results">Results</a>
+      <a href="#limitations">Limitations</a>
+      <a href="#recommendations">Recommendations</a>
+      <a href="#reproducibility">Reproducibility</a>
+      <a href="#acknowledgments">Acknowledgments</a>
+    </div>
+  </div>
+</header>
+
+<section id="abstract">
+  <div class="wrap">
+    <h2><span class="num">01</span>Abstract</h2>
+    <p>Can a page's own recent search and engagement history be used to rank content pages so the
+    ones most likely to see a meaningful future decline surface first for human review? We queried
+    FlyRank's 79-million-row content-performance warehouse directly with DuckDB over three
+    time-aware cutoffs, building leakage-safe recent/prior-window features and a future-click-ratio
+    decline label whose threshold was read from the training data's own distribution. A random
+    forest was compared against a transparent momentum-rule baseline on an identical, strictly
+    later holdout. At a strict top-50 cutoff neither method clearly beat chance against this
+    label's 19.5% base rate — the honest result, reported directly — but the model's Average
+    Precision across the full ranked list was roughly double the baseline's (0.374 vs 0.188),
+    indicating real if modest ranking signal that isn't concentrated in the first 50 rows. The
+    output is a full ranked queue with reason codes and a suggested action per page, intended as a
+    prioritization aid for a human reviewer, not a claim about search-engine behavior.</p>
+  </div>
+</section>
+
+<section id="intro">
+  <div class="wrap">
+    <h2><span class="num">02</span>Introduction</h2>
+    <p>An editorial or SEO reviewer cannot manually audit every content page every month. What they
+    need is not a verdict but an ordering: which pages are worth looking at first, and why. This
+    project builds that ordering — a ranked action queue over anonymized content pages — from
+    historical search and engagement signals alone.</p>
+    <p>The output is explicitly <strong>decision-support</strong>. It does not predict what a
+    search engine will do, and it does not claim that refreshing a flagged page will recover its
+    traffic. It claims only that, based on this portfolio's own history, some pages carry a
+    combination of signals — declining clicks, worsening position, falling engagement — that make
+    them worth a human's attention before others.</p>
+  </div>
+</section>
+
+<section id="data">
+  <div class="wrap">
+    <h2><span class="num">03</span>Data</h2>
+    <p><strong>Release:</strong> <code>FlyRank/internship-warehouse</code> (build v20260703),
+    Hugging Face, gated — queried directly over <code>hf://</code> Parquet with DuckDB, no full
+    download. A metadata-only check confirmed the live table: <strong>78,835,655 rows</strong>,
+    spanning <strong>2025-01-27 to 2026-06-30</strong>.</p>
+    <p><strong>Tables used:</strong> <code>fact_content_daily_performance</code> (the time series —
+    every feature and the label come from here) and <code>dim_clients</code> (per-client tracking
+    start dates, used to keep every time window inside a client's own confirmed history).
+    <code>dim_content</code> and <code>fact_content_query_90d</code> were deliberately excluded —
+    the query table's fixed 90-day window overlaps any recent-month label, which would risk exactly
+    the leakage this design is built to avoid.</p>
+    <p><strong>Columns used</strong> (confirmed against the live schema, not assumed):
+    <code>report_date, client_hash_id, content_hash_id, gsc_data_available, ga4_data_available,
+    gsc_impressions, gsc_clicks, gsc_avg_position, ga4_pageviews, sessions_organic,
+    ga4_engaged_sessions, ga4_total_engagement_sec, scroll_events, month</code>.</p>
+
+    <div class="callout good">
+      <strong>Grain check, reported honestly.</strong> We probed a mid-panel month (2026-01) for
+      exact-duplicate page-days and found none there. The specific duplicate example that motivated
+      this check falls inside the sealed final month (2026-06), which we deliberately never open
+      while building label logic — so we cannot confirm it here. We kept the defensive
+      <code>GROUP BY content_hash_id, report_date</code> + <code>ANY_VALUE()</code>
+      deduplication anyway: it costs nothing when clean, and protects against silent
+      double-counting if duplicates exist elsewhere in the panel.
+    </div>
+
+    <p><strong>The panel is unbalanced, confirmed directly:</strong> of 104 clients, only
+    <strong>67</strong> carry a confirmed <code>gsc_data_start</code> and only <strong>51</strong>
+    carry a confirmed <code>ga4_data_start</code>; the rest have no verified tracking-start date on
+    one or both signals and are excluded from eligibility rather than assumed present. Confirmed
+    start dates span 2025-01-27 to 2026-06-02 (median 2025-11-05) — every time window below is
+    checked against each client's own start, never a single global calendar window.</p>
+    <p><strong>Public safety:</strong> no URL, client name, or raw query ever leaves the warehouse.
+    This lane never touches the query table, the only one with anything query-shaped in it, and
+    every identifier shown below is an anonymized <code>content_hash_id</code>.</p>
+  </div>
+</section>
+
+<section id="method">
+  <div class="wrap">
+    <h2><span class="num">04</span>Methodology</h2>
+    <p><strong>Unit of analysis:</strong> content page × cutoff date. For a cutoff <code>T</code>,
+    features use only data at or before <code>T</code>; the label uses only data strictly after
+    <code>T</code>. Three cutoffs were used — 2025-09-30 and 2025-11-30 for training, 2026-01-31 held
+    out for testing — all ending well before the sealed June 2026 month.</p>
+
+    <h3>Features (all knowable at or before the cutoff)</h3>
+    <p>For a 28-day "recent" window and the preceding 28-day "prior" window: summed impressions,
+    clicks, organic sessions, engaged sessions, engagement seconds, scroll events, and mean search
+    position — plus derived changes and ratios between the two windows, and 56-day click volatility.
+    Fourteen features in total; none reference anything after the cutoff.</p>
+
+    <h3>Label — an operational definition, thresholded on data, not a guess</h3>
+    <p><code>future_click_ratio = (future_clicks + 1) / (recent_clicks + 1)</code>, computed over the
+    28 days strictly after the cutoff. A page is labeled a review opportunity if this ratio falls at
+    or below the <strong>25th percentile of the training split's own distribution (0.667)</strong> —
+    the threshold was read off the data, not chosen in advance. Only pages meeting a visibility floor
+    (median <code>recent_impressions</code> among visible pages, 107) are eligible: an absent page
+    isn't a "declining" one.</p>
+
+    <h3>Validation design and leakage audit</h3>
+    <p>Time-aware, not random: the test cutoff is strictly later than every training cutoff, mimicking
+    real deployment (score today, get graded next month). The label threshold was computed on the
+    training split only. Every audit question below was checked directly in code, not assumed:</p>
+    <table>
+      <tr><th>Check</th><th>Answer</th></tr>
+      <tr><td>Future metrics used as features?</td><td>No</td></tr>
+      <tr><td>Label threshold computed on full data before splitting?</td><td>No — train split only</td></tr>
+      <tr><td>Model fit on test data?</td><td>No</td></tr>
+      <tr><td>Split time-based?</td><td>Yes — test cutoff strictly later</td></tr>
+      <tr><td>Population selection uses outcome-window info?</td><td>No</td></tr>
+    </table>
+
+    <h3>Baseline, in plain words</h3>
+    <p>"A page is worth reviewing first if it's already losing clicks and losing search position,
+    relative to its own recent history." A transparent score with no fitted weights:
+    <code>baseline_score = -click_ratio_recent_prior + position_change</code>.</p>
+
+    <h3>Class balance</h3>
+    <p>Not rebalanced with SMOTE — this is a ranking problem, not an accuracy problem. Precision@50,
+    Recall@50, and Average Precision are used, always reported against the base rate.</p>
+  </div>
+</section>
+
+<section id="results">
+  <div class="wrap">
+    <h2><span class="num">05</span>Results</h2>
+    <p>Trained on 48,697 rows (base rate 25.6%), tested on 30,302 held-out rows (base rate 19.5%).</p>
+
+    <table>
+      <tr><th>Method</th><th>Precision@50</th><th>Hits/50</th><th>Recall@50</th><th>Avg. Precision</th></tr>
+      <tr><td>Baseline (rules)</td><td>0.120</td><td>6</td><td>0.001</td><td>0.188</td></tr>
+      <tr><td>Random forest</td><td>0.180</td><td>9</td><td>0.002</td><td>0.374</td></tr>
+      <tr><td><em>Base rate</em></td><td colspan="4">0.195</td></tr>
+    </table>
+
+    <figure>
+      <img src="assets/charts/model_vs_baseline.png" alt="Bar chart comparing baseline and random forest on precision@50, recall@50, and average precision, with a base-rate reference line">
+      <figcaption>Model vs baseline, test cutoff 2026-01-31. The dashed line marks the base rate.</figcaption>
+    </figure>
+
+    <div class="gauge-block">
+      <h3>Reading the top-50 number honestly</h3>
+      <div class="gauge-row">
+        <div class="gauge-label"><span>Baseline — Precision@50</span><span>0.120</span></div>
+        <div class="gauge"><div class="gauge-fill baseline" style="width:12%"></div><div class="chance-marker" style="left:19.5%"></div></div>
+      </div>
+      <div class="gauge-row">
+        <div class="gauge-label"><span>Random forest — Precision@50</span><span>0.180</span></div>
+        <div class="gauge"><div class="gauge-fill model" style="width:18%"></div><div class="chance-marker" style="left:19.5%"></div></div>
+      </div>
+      <p>With a ~19.5% base rate, picking 50 pages at random lands about 9–10 true positives by
+      luck alone. The random forest got 9. The rule baseline got 6 — <em>below</em> chance.
+      <strong>Precision@50 alone does not support a "the model wins" claim here.</strong> Where the
+      model does show a real edge is Average Precision, a whole-list ranking-quality measure:
+      0.374 vs the baseline's 0.188 — roughly double, and roughly double the base rate too. The
+      advantage is real; it just isn't concentrated in the first 50 rows out of a densely-positive
+      pool. A mixed, honestly reported result is the correct thing to publish here.</p>
+    </div>
+
+    <figure>
+      <img src="assets/charts/label_distribution.png" alt="Bar chart of label prevalence by split, train 25.6 percent, test 18.2 percent">
+      <figcaption>Label prevalence by split — by construction (a training-set percentile cut), not tuned for effect.</figcaption>
+    </figure>
+
+    <figure>
+      <img src="assets/charts/feature_importance.png" alt="Horizontal bar chart of random forest feature importances, led by recent_clicks and click_volatility_56d">
+      <figcaption>Feature importance. The top feature (<code>recent_clicks</code>, 37.7%) is a plausible, non-circular driver — a past-window aggregate, not the future-window column the label is built from — and does not dominate the way a leaked feature would (no single feature approaches 100%).</figcaption>
+    </figure>
+
+    <p><strong>Errors, read before believing the score:</strong> at a naive 0.5 probability
+    threshold, the model produced 363 false negatives and 10,747 false positives out of 30,302 test
+    rows. This reflects <code>class_weight="balanced"</code> pushing many borderline pages above 0.5
+    against an already-elevated base rate — a reason to use the ranked score for prioritization, not
+    the binary threshold, in production.</p>
+  </div>
+</section>
+
+<section id="limitations">
+  <div class="wrap">
+    <h2><span class="num">06</span>Limitations &amp; honest framing</h2>
+    <ul>
+      <li>This is observed historical behavior for a client portfolio, not a controlled experiment —
+      nothing here supports a causal claim.</li>
+      <li><strong>The headline result is mixed, on purpose stated plainly:</strong> a reviewer using
+      only the first 50 rows of this queue should not expect a strong hit rate; a reviewer treating
+      the whole ranked list as a soft prioritization order is on firmer ground.</li>
+      <li>The model finds associations useful for prioritizing review. It does not predict
+      search-engine behavior, and a high score does not guarantee a refresh recovers traffic.</li>
+      <li><code>opportunity_label</code> is an operational definition — a 25th-percentile cut on this
+      portfolio, in this period — not a certified measure of content quality.</li>
+      <li>Data coverage is uneven: only 67/104 clients have a confirmed GSC start, only 51/104 a
+      confirmed GA4 start; engagement features have far lower coverage (~54%) than search features
+      (~82%). Pages excluded by the eligibility filter are not scored at all.</li>
+      <li>Measured on one time-aware holdout, one snapshot — may not generalize to a different
+      quarter or client mix.</li>
+      <li>The label concerns search-referred clicks only; a page could be healthy on other channels
+      and still be flagged.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="recommendations">
+  <div class="wrap">
+    <h2><span class="num">07</span>Ranked recommendations</h2>
+    <p>Every scored page carries an action and a reason code built from the same features the model
+    saw — nothing here requires trusting the model's internals.</p>
+    <table>
+      <tr><th>Action</th><th>When</th></tr>
+      <tr><td><span class="badge refresh">REFRESH_REVIEW</span></td><td>high score + a decline reason code (declining clicks/impressions, worsening position, session drop)</td></tr>
+      <tr><td><span class="badge investigate">INVESTIGATE</span></td><td>decline and recovery codes both present — conflicting signal</td></tr>
+      <tr><td><span class="badge protect">PROTECT</span></td><td>high visibility, low clicks, no clear decline yet</td></tr>
+      <tr><td><span class="badge recover">RECOVERY_REVIEW</span></td><td>recovery signal present, no decline codes</td></tr>
+      <tr><td><span class="badge monitor">MONITOR</span></td><td>everything else</td></tr>
+    </table>
+
+    <figure>
+      <img src="assets/charts/action_mix.png" alt="Bar chart of action counts across the full scored test population">
+      <figcaption>Action mix across the full scored test population (n=30,302): 15,053 REFRESH_REVIEW, 6,526 MONITOR, 4,483 RECOVERY_REVIEW, 3,744 INVESTIGATE, 496 PROTECT.</figcaption>
+    </figure>
+
+    <figure>
+      <img src="assets/charts/reason_code_mix.png" alt="Horizontal bar chart of reason code frequency across the full scored test population">
+      <figcaption>Reason-code frequency (rows can carry more than one code) — led by POSITION_WORSENING (13,569) and RECOVERY_SIGNAL (8,227).</figcaption>
+    </figure>
+
+    <h3>Top of the queue (illustrative, anonymized)</h3>
+    <div class="queue-row"><div class="rank">1</div><div class="id">content_7132151e…</div><div class="score">0.899 <span class="badge monitor">MONITOR</span></div></div>
+    <div class="queue-row"><div class="rank">2</div><div class="id">content_690341de…</div><div class="score">0.895 <span class="badge refresh">REFRESH_REVIEW</span></div></div>
+    <div class="queue-row"><div class="rank">3</div><div class="id">content_60ffc60f…</div><div class="score">0.895 <span class="badge monitor">MONITOR</span></div></div>
+    <div class="queue-row"><div class="rank">4</div><div class="id">content_a1ff20c7…</div><div class="score">0.894 <span class="badge recover">RECOVERY_REVIEW</span></div></div>
+    <div class="queue-row"><div class="rank">5</div><div class="id">content_138f7581…</div><div class="score">0.892 <span class="badge monitor">MONITOR</span></div></div>
+    <p style="margin-top:14px; font-size:14px; color:var(--ink-soft);">Full top-50 queue with all
+    reason codes and supporting signals: <code>work/outputs/capstone_ranked_recommendations.csv</code>
+    in the repository.</p>
+  </div>
+</section>
+
+<section id="reproducibility">
+  <div class="wrap">
+    <h2><span class="num">08</span>Reproducibility</h2>
+    <p>Every number on this page traces back to an executed cell in
+    <code>work/notebooks/capstone.ipynb</code>, run top to bottom in Google Colab against the live
+    warehouse with a personal Hugging Face read token stored in Colab Secrets — never hardcoded or
+    printed. Random seed <code>42</code> throughout.</p>
+    <ul>
+      <li>Notebook: <code>work/notebooks/capstone.ipynb</code></li>
+      <li>Ranked queue: <code>work/outputs/capstone_ranked_recommendations.csv</code></li>
+      <li>Model comparison receipts: <code>work/outputs/capstone_model_comparison.json</code></li>
+      <li>Repository: see the link in the footer below</li>
+    </ul>
+    <p>To rerun: open the notebook in Colab, add your own Hugging Face token as the Colab secret
+    <code>internship-token</code>, request dataset access at
+    <a href="https://huggingface.co/datasets/FlyRank/internship-warehouse">FlyRank/internship-warehouse</a>
+    (instant approval), and run all cells.</p>
+  </div>
+</section>
+
+<footer id="acknowledgments">
+  <div class="wrap">
+    <h2 style="font-size:18px; margin-bottom:10px;">Acknowledgments &amp; data credit</h2>
+    <p>Built on the FlyRank ML Internship dataset. Data hosted and provided by
+    <a href="https://flyrank.ai">FlyRank</a>.</p>
+    <p style="margin-top:24px;">Capstone project, FlyRank Machine Learning Internship — Refresh /
+    Content Opportunity Scoring lane. Repository:
+    <a href="https://github.com/mukeshboolani786/flyrank-internship-ml">github.com/mukeshboolani786/flyrank-internship-ml</a></p>
+  </div>
+</footer>
+
+</body>
+</html>
